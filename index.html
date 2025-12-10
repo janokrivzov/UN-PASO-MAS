@@ -1,0 +1,1481 @@
+import React, { useState, useEffect } from 'react';
+import { 
+  LayoutDashboard, 
+  Users, 
+  CheckSquare, 
+  Calendar, 
+  AlertCircle, 
+  Plus, 
+  Search, 
+  Filter,
+  ChevronRight,
+  FileText,
+  TrendingUp,
+  MoreVertical,
+  CheckCircle2,
+  Zap,
+  Briefcase,
+  X,
+  Clock,
+  Lock,
+  MapPin,
+  LogOut,
+  KeyRound,
+  HelpCircle,
+  ArrowLeft,
+  Phone,
+  Mail,
+  FileCheck,
+  Upload,
+  Download,
+  Pencil, 
+  Save,
+  Database,
+  Loader2,
+  Cloud,
+  UserX,
+  UserCheck,
+  AlertTriangle
+} from 'lucide-react';
+
+// --- FIREBASE IMPORTS ---
+import { initializeApp } from 'firebase/app';
+import { 
+  getAuth, 
+  signInWithCustomToken, 
+  signInAnonymously, 
+  onAuthStateChanged 
+} from 'firebase/auth';
+import { 
+  getFirestore, 
+  collection, 
+  doc, 
+  addDoc, 
+  updateDoc, 
+  onSnapshot, 
+  query,
+  writeBatch,
+  getDocs,
+  where 
+} from 'firebase/firestore';
+
+// ------------------------------------------------------------------
+// CONFIGURACIÓN DE FIREBASE (INTELIGENTE)
+// ------------------------------------------------------------------
+const getFirebaseConfig = () => {
+  try {
+    // 1. Intenta usar la config del entorno de prueba (para que funcione AHORA)
+    if (typeof __firebase_config !== 'undefined') {
+      return JSON.parse(__firebase_config);
+    }
+  } catch (e) {
+    console.warn("Entorno local detectado.");
+  }
+
+  // 2. Si no estamos en el chat, usa TU CONFIGURACIÓN REAL (GitHub/Hosting)
+  return {
+    apiKey: "AIzaSyC_zrqVkpfkmUN2j0m8i7kXlkWuo01qNKA",
+    authDomain: "un-paso-mas-1.firebaseapp.com",
+    projectId: "un-paso-mas-1",
+    storageBucket: "un-paso-mas-1.firebasestorage.app",
+    messagingSenderId: "662339007272",
+    appId: "1:662339007272:web:f99489667b648b8760d61d",
+    measurementId: "G-5MP4QTPDDO"
+  };
+};
+
+const firebaseConfig = getFirebaseConfig();
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+// ID del Proyecto para separar datos en entornos de prueba
+// En producción usará 'un-paso-mas-prod'
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'un-paso-mas-prod';
+
+// --- CONFIGURACIÓN DEL EQUIPO ---
+const TEAM_MEMBERS = [
+  { id: 'u2', name: 'Ivan Ritvo', initials: 'IR', color: 'bg-indigo-600', email: 'ivan', accessCode: '1234' },
+  { id: 'u3', name: 'Jano Krivzov', initials: 'JK', color: 'bg-rose-600', email: 'jano', accessCode: '4040' },
+];
+
+// --- LISTA DE CLIENTES DEL PDF (SEMILLA DE DATOS) ---
+// Esta lista se usa SOLAMENTE cuando presionas "Cargar Base Inicial".
+const RAW_CLIENTS_FROM_PDF = [
+  ["ALEJANDRO DE LA TORRE", "20119861102", "torre2007", "NO"],
+  ["ALMEYRA EÑO AGUSTIN", "20247871846", "", "NO"],
+  ["ALONSO EMILIO CARLOS", "23041480289", "estu1380", "NO"],
+  ["Asoc. Española de Sras de la Virgen del Pilar", "30707695281", "", "NO"],
+  ["BERARDI ROQUE", "20113891743", "Alestu1382", "NO"],
+  ["BPR ARGENTINA S.R.L", "30711611270", "OLDANI ROSA", "NO"],
+  ["CLUSTERING SRL", "30711727309", "VADELL DIEGO", "NO"],
+  ["CON. DE CREDITOS SUR BUENAYRE S.A.", "30711289670", "FERNANDEZ NORMA", "NO"],
+  ["DELFINO ROSANA ELENA", "27225897935", "Ivan R2008.", "SI"],
+  ["DROZNES ALEJANDRO MAX", "20284183860", "2Adroznes84", "SI"],
+  ["FARA ERNESTO", "20301352523", "2024Ernesto", "SI"],
+  ["GADEA CHRISTIAN A.", "20289079360", "Pileta2025", "SI"],
+  ["LA PRIMAVERA SH", "30708962909", "LICCIARDONE CLAUDIA", "NO"],
+  ["ALPRIMA SRL", "30712332057", "BLANCO ERICA", "NO"],
+  ["NICOLARI CLAUDIA ALICIA", "27165837741", "A1A2afip2022", "NO"],
+  ["SCARELLA PABLO", "20254263126", "PabloScarella2025", "SI"],
+  ["PITAMEGLIA ATILIO ABEL", "23131029829", "ASafip2024", "SI"],
+  ["PRIEGUE LAURA", "27217388649", "LMPriegue0853", "SI"],
+  ["PURRIÑOS HORACIO", "20104573194", "Purri17121952", "NO"],
+  ["GRAZIOSI RENATO", "20134735423", "Kyudokan1957", "NO"],
+  ["RITVO IVAN NICOLAS", "20272539996", "A1 Claselices25", "SI"],
+  ["ROJO ALEJO MANUEL", "20241593968", "afip2014", "NO"],
+  ["SIMONE VANINA INES", "23235067854", "Afip201888", "NO"],
+  ["TOFFOLETTO DANIEL ARTURO", "23215840689", "Danilo2704A35", "SI"],
+  ["FELUNINO S.R.L.", "30713372001", "LICCIARDONE CLAUDIA", "NO"],
+  ["THREE MAR S.R.L.", "30712844503", "A5afip2024", "SI"],
+  ["SILVER STAR GROUP SRL", "30711820708", "RAMIREZ GABRIELA", "NO"],
+  ["B A BIZ SRL", "30714060356", "ROJO ALEJO", "NO"],
+  ["OSETE ALBERTO", "20082711369", "ASalbert2025", "SI"],
+  ["DREI SERVICIOS ELÉCTRICOS S.R.L.", "30714182923", "CHIOZZA SEBASTIAN", "NO"],
+  ["CARTECSA SA", "33714198039", "ESPERANZA GUILLERMO", "NO"],
+  ["CHAVEZ MARIA CELIA", "27264347713", "Humberto50", "SI"],
+  ["ALVAREZ GUILLERMO", "20294612239", "alvarez29", "NO"],
+  ["TRES SARGENTOS COMBUSTIBLES S.R.L.", "30713887400", "SOTO IGNACIO", "NO"],
+  ["ADITUS S.R.L.", "30714692344", "BALARI MARIO", "NO"],
+  ["ENG SOLUCIONES ELECTRICAS S.R.L.", "30714721433", "ARGENTINO MATIAS", "NO"],
+  ["CHACRAS LA PRUDENCIA", "33714738009", "SOTO MARTIN", "NO"],
+  ["VETERE MARIA BELEN", "27265223562", "Fml0103mb1407", "SI"],
+  ["DOÑA MERCEDES S.A", "33711706149", "sotoMaxi", "NO"],
+  ["LABAT MARIA LAURA", "27239744775", "Lulu2025**", "SI"],
+  ["MOYANO CASTROMAN MARTIN", "20392119265", "chicho15", "NO"],
+  ["TESSUTO BAIRES S.A.", "33711488389", "mantegna marcelo", "NO"],
+  ["ISSAHAROFF ALDO", "20045580459", "28elmer14", "NO"],
+  ["IRIGOYEN MARCELO JOSE", "20140136159", "A1A1marcelo25", "SI"],
+  ["SCHIANO PAULA ALEJANDRA", "27314386626", "Patita1521", "SI"],
+  ["LEPIER SOLUTIONS S.R.L.", "30715244876", "PIERBATTISTI LEANDRO", "NO"],
+  ["FRANCIA GABRIELA", "27169367057", "Senderos45062", "SI"],
+  ["ENGLER SERVICIOS S.R.L.", "30715478567", "ARGENTINO WALTER", "NO"],
+  ["LC LUGANO S.R.L.", "30715497626", "VITERI RONCAL", "NO"],
+  ["BASALDUA SILVINA MARIA", "27146101947", "San13sitas", "SI"],
+  ["BASALDUA GRACIELA", "27138510617", "Cup08mipar", "SI"],
+  ["PUEBLA MARIA NOEL", "23276877054", "Claveafip2025", "SI"],
+  ["SA ALFONSO ALBERTO", "23275073989", "Alfonso2022", "NO"],
+  ["BOGARIN MIGUEL RAFAEL", "20261269911", "Manzana2025*", "SI"],
+  ["DCTL S.R.L.", "30715582526", "SA ALFONSO ALBERTO", "NO"],
+  ["GALARRAGA RAMON JOSE", "20181505754", "Fedegala2025", "SI"],
+  ["RUIZ GUIÑAZU ANA", "27268949289", "Lucioana1919", "SI"],
+  ["FERDINANDO'S SA", "30709230367", "", "NO"],
+  ["FORESFINA", "30619483983", "LANGER OSVALDO", "NO"],
+  ["PORTO GUILLERMO ALBERTO", "20287491477", "Ivanporto222", "NO"],
+  ["ARQPARLANTE", "30715677675", "PORTO GUILLERMO", "NO"],
+  ["LANGER OSVALDO", "20085335724", "Romeo20250", "SI"],
+  ["TISSERA ADRIANA ELENA", "27104600943", "AETissera2024", "SI"],
+  ["ACISUM", "30715752529", "federico barri", "NO"],
+  ["HORN ALEXIS LUIS", "20277792290", "1Camilo2025", "SI"],
+  ["SIMONETTI LUCIO", "20267355372", "Napoleon48", "SI"],
+  ["VIGNA STEFANO", "20369903498", "A4s.vigna92", "NO"],
+  ["PABLO SANCHEZ & ASOC SRL", "30716119994", "SANCHEZ PABLO", "NO"],
+  ["SANCHEZ PABLO SEBASTIAN", "20268032372", "Tiempoespacio22", "NO"],
+  ["PACHELO HERNAN", "20294907352", "Trueno23/()", "NO"],
+  ["ROMITO LEONARDO LUIS", "20272187828", "Leorom3701", "NO"],
+  ["PITAMEGLIA JAVIER MARTIN", "20379480935", "Javier6061", "NO"],
+  ["LOPEZ GABRIELA", "23214370484", "GLopez12345", "SI"],
+  ["RT PRODUCTORES SAS", "30716305070", "ROMITO LEANDRO", "NO"],
+  ["Bernardo Maria Marcela", "27220462442", "B3blasliber30", "SI"],
+  ["GONZALEZ DIEGO JAVIER", "20271690550", "Diegojavier 1978", "SI"],
+  ["FERREIRA OXLEY GABRIELA", "27946879539", "A4pauc08030412", "SI"],
+  ["UN PASO MAS SAS", "30716592738", "RITVO IVAN NICOLAS", "SI"],
+  ["KITCHENITA SAS", "30716616807", "BOCCARA ALEXANDRE", "NO"],
+  ["SUSHI BALLESTER S.R.L", "30711829969", "GUILLERMO CASTAGNINO", "SI"],
+  ["ARIAS RUBEN OSVALDO", "20116565324", "Parias2024", "SI"],
+  ["MADELON SRL", "30655345228", "GABRIELA TADDEI", "NO"],
+  ["COUCEIRO MARIA VICTORIA", "27318962133", "Emma_2013*", "SI"],
+  ["AMADO PEREIRA JORGE", "20948653746", "Colombia 12", "SI"],
+  ["YAUHARI ALCHIRITI LORIANA", "27956204874", "11172830Sebas", "SI"],
+  ["ADARO LEONARDO JOSE", "20264797765", "Santiago2025*-", "SI"],
+  ["ALMACENAMIENTO DIGITAL SRL", "30717409201", "", "NO"],
+  ["MIRANDA MARIA AGUSTINA", "27295424465", "AmorPuro2025", "SI"],
+  ["CX4 S.R.L.", "30717792730", "MARIANO ADRIAN", "NO"],
+  ["ZAGO MARIA PAZ", "27365932501", "Europa 2026", "SI"],
+  ["AGUSTIN REBOURSIN", "20353654749", "Z7m8EKIU3_", "SI"],
+  ["MAXIMILIANO SOTO DELAPORTE", "23257354709", "Sotodelaporte1315", "SI"],
+  ["YAUHARI SABRA RABIH", "20956453497", "Cococandy30", "SI"],
+  ["PALLAS ROCIO GUADALUPE", "27278603763", "Felipepallas01@", "SI"],
+  ["SILVIA ADRIANA RIOS", "27392224349", "Adriana2025", "SI"],
+  ["GSTELECOM S.A.", "30711748314", "NAKKAB SION", "NO"],
+  ["ANA CONCEPCION KLEIN", "27039727604", "Amalia19721", "SI"],
+  ["GUSTAVO MARTIN CRISCUOLO", "20284630131", "Bruna180121*", "SI"],
+  ["LAGO JUAN JOSE MARIA", "20047546827", "JJmlado2025", "SI"],
+  ["CAPISTO MARIA LUISA", "27045559845", "Camilo2025", "SI"],
+  ["BOTON ONCE S.R.L.", "30715905422", "", "NO"],
+  ["MARIA EUGENIA FIGINI", "27251466195", "Tete12772025", "SI"],
+  ["MARIA EUGENIA LEPERE", "27307462694", "2012Julita", "SI"],
+  ["SR Realty Group SAS", "30718604881", "SILVIA ADRIANA RIOS", "SI"],
+  ["QUIROGA VALENTINA", "23442621314", "Vquiroga161864", "SI"],
+  ["CANTERO MARTINEZ MARIA", "27334250291", "Agustina2025Bu", "SI"],
+  ["PUEBLA EDUARDO ALBERTO", "20055285145", "Arca48edupue", "SI"],
+  ["CUBERO VIVIANA LORENA", "27250630528", "Viviana20222", "SI"],
+  ["SOLAZ LOS RABITOS", "30718788036", "PUEBLA EDUARDO", "SI"],
+  ["ESCOBAR RIVERA ELSSY", "27956861417", "Tonky250825", "SI"],
+  ["VERA BEVACQUA NATALIA", "27244847701", "Chilindrina2508!", "SI"],
+  ["Maria Belen Zago", "24396440675", "Bocajuniors04", "SI"],
+  ["CASA OADA SAS", "30718866142", "CUBERO VIVIANA", "SI"],
+  ["CORDA FERREIRA PAU", "20455817847", "Pauc080305", "SI"],
+  ["PUERTAS MIGUEL ANGEL", "20045875785", "Michael2491", "SI"],
+  ["PUERTAS MARIA LAURA", "27258027693", "Puertas2804", "SI"],
+  ["EPOWER", "33718994409", "CANTERO MARTINEZ", "SI"],
+  ["JUDAMA SAS", "30719007283", "TOFFOLETTO DANIEL", "SI"],
+  ["Manuel Rubis Aparicio", "20957774068", "bb-Man2245", "SI"],
+  ["DIAZ GUSTAVO ARMANDO", "20120769368", "DiazGust9368avo25", "SI"],
+  ["CACERES VERONICA EDITH", "27223524023", "1936Leopoldo", "SI"],
+  ["YAIR AMED", "20357551022", "823817!Vadu", "SI"],
+  ["GARBITU S.A.", "30714800732", "", "NO"],
+  ["KRALL SISTEMAS S.A.S.", "30715924729", "Nicolas Aimetta", "NO"]
+];
+
+// --- LÓGICA DE NEGOCIO ---
+const calculateDynamicDate = (obligationType, cuitStr) => {
+  const today = new Date();
+  const currentMonth = today.getMonth();
+  const currentYear = today.getFullYear();
+  const cleanCuit = cuitStr ? cuitStr.replace(/[^0-9]/g, '') : "0";
+  const lastDigit = parseInt(cleanCuit.slice(-1)) || 0;
+  
+  let day = 15; 
+  
+  switch(obligationType) {
+    case "IVA":
+    case "Libro IVA Digital":
+      if (lastDigit <= 1) day = 18;
+      else if (lastDigit <= 3) day = 19;
+      else if (lastDigit <= 5) day = 20;
+      else if (lastDigit <= 7) day = 21;
+      else day = 22;
+      break;
+    case "Sueldos 931":
+      if (lastDigit <= 3) day = 9;
+      else if (lastDigit <= 6) day = 10;
+      else day = 11;
+      break;
+    case "Pago Sueldos":
+      day = new Date(currentYear, currentMonth + 1, 0).getDate(); 
+      break;
+    case "Monotributo":
+      day = 20; 
+      break;
+    case "Ingresos Brutos":
+    case "Convenio Multilateral":
+      day = 15 + Math.floor(lastDigit / 2); 
+      break;
+    case "Ganancias Sociedades":
+       day = 13 + Math.floor(lastDigit / 2);
+       break;
+    case "Sindicato":
+       day = 15;
+       break;
+  }
+  
+  return new Date(currentYear, currentMonth, day).toISOString().split('T')[0];
+};
+
+const OBLIGATION_META = {
+  "IVA": { priority: "high", category: "Impuestos" },
+  "Libro IVA Digital": { priority: "medium", category: "Impuestos" },
+  "Sueldos 931": { priority: "high", category: "Laboral" },
+  "Ingresos Brutos": { priority: "medium", category: "Impuestos" },
+  "Convenio Multilateral": { priority: "medium", category: "Impuestos" },
+  "Monotributo": { priority: "low", category: "Impuestos" },
+  "Ganancias Sociedades": { priority: "high", category: "Impuestos" },
+  "Sindicato": { priority: "low", category: "Laboral" },
+  "Pago Sueldos": { priority: "high", category: "Laboral" },
+  "Autónomos": { priority: "medium", category: "Impuestos" },
+  "Bienes Personales": { priority: "low", category: "Impuestos" }
+};
+
+// --- COMPONENTES UI REUTILIZABLES ---
+
+const StatusBadge = ({ status }) => {
+  const styles = {
+    pending: "bg-yellow-100 text-yellow-800 border-yellow-200",
+    "in-progress": "bg-blue-100 text-blue-800 border-blue-200",
+    completed: "bg-green-100 text-green-800 border-green-200",
+    blocked: "bg-red-100 text-red-800 border-red-200", 
+    active: "bg-green-100 text-green-800",
+    inactive: "bg-gray-100 text-gray-500"
+  };
+  return (
+    <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium border ${styles[status] || "bg-gray-100 text-gray-800"}`}>
+      {status === 'active' ? 'Activo' : status === 'inactive' ? 'Inactivo' : status}
+    </span>
+  );
+};
+
+const PriorityBadge = ({ priority }) => {
+  const styles = {
+    low: "text-gray-500",
+    medium: "text-blue-500",
+    high: "text-orange-500",
+    critical: "text-red-600 font-bold"
+  };
+  const labels = {
+    low: "Baja",
+    medium: "Media",
+    high: "Alta",
+    critical: "Urgente"
+  };
+  return (
+    <span className={`flex items-center gap-1 text-xs ${styles[priority]}`}>
+      <AlertCircle size={12} />
+      {labels[priority]}
+    </span>
+  );
+};
+
+const UserAvatar = ({ userId, showName = false }) => {
+  if (!userId) {
+    return (
+      <div className="flex items-center gap-2" title="Sin Asignar">
+        <div className="w-7 h-7 rounded-full bg-gray-200 border border-gray-300 border-dashed flex items-center justify-center text-gray-400">
+          <HelpCircle size={14} />
+        </div>
+        {showName && <span className="text-sm text-gray-400 italic">Sin Asignar</span>}
+      </div>
+    );
+  }
+
+  const user = TEAM_MEMBERS.find(u => u.id === userId);
+  if (!user) return <div className="w-6 h-6 rounded-full bg-gray-300 flex items-center justify-center text-[10px]">?</div>;
+  
+  return (
+    <div className="flex items-center gap-2" title={user.name}>
+      <div className={`w-7 h-7 rounded-full ${user.color} text-white flex items-center justify-center text-xs font-bold ring-2 ring-white shadow-sm`}>
+        {user.initials}
+      </div>
+      {showName && <span className="text-sm text-gray-700">{user.name}</span>}
+    </div>
+  );
+};
+
+// --- PANTALLA DE LOGIN ---
+const LoginScreen = ({ onLogin }) => {
+  const [email, setEmail] = useState('');
+  const [code, setCode] = useState('');
+  const [error, setError] = useState('');
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const user = TEAM_MEMBERS.find(u => u.email === email && u.accessCode === code);
+    if (user) {
+      onLogin(user);
+    } else {
+      setError('Credenciales incorrectas.');
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
+      <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-sm border border-gray-200">
+        <div className="text-center mb-8">
+          <div className="inline-flex p-3 bg-blue-600 text-white rounded-xl shadow-lg shadow-blue-200 mb-4">
+             <Briefcase size={32} />
+          </div>
+          <h1 className="text-2xl font-bold text-gray-800 uppercase tracking-tight">UN PASO MAS</h1>
+          <p className="text-gray-500 text-sm">Estudio Contable</p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Usuario</label>
+            <div className="relative">
+              <Users className="absolute left-3 top-2.5 text-gray-400" size={18} />
+              <input 
+                type="text" 
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                placeholder="Ej: ivan, jano"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Código de Acceso</label>
+            <div className="relative">
+              <KeyRound className="absolute left-3 top-2.5 text-gray-400" size={18} />
+              <input 
+                type="password" 
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                placeholder="••••"
+              />
+            </div>
+          </div>
+
+          {error && <p className="text-red-500 text-xs text-center bg-red-50 p-2 rounded">{error}</p>}
+
+          <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-lg transition-colors shadow-lg shadow-blue-200">
+            INGRESAR AL SISTEMA
+          </button>
+        </form>
+        
+        <div className="mt-6 text-center text-xs text-gray-400">
+          <p>Sistema v6.1 - Producción Híbrida</p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// --- APLICACIÓN PRINCIPAL ---
+
+export default function App() {
+  const [currentUser, setCurrentUser] = useState(null); 
+  const [firebaseUser, setFirebaseUser] = useState(null); 
+  const [isAuthReady, setIsAuthReady] = useState(false); 
+  
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const [selectedClient, setSelectedClient] = useState(null); 
+  const [clients, setClients] = useState([]); 
+  const [tasks, setTasks] = useState([]); 
+  const [currentUserFilter, setCurrentUserFilter] = useState('all'); 
+  const [notification, setNotification] = useState(null);
+  const [errorMsg, setErrorMsg] = useState(null);
+  
+  const [clientStatusFilter, setClientStatusFilter] = useState('active'); 
+
+  // Modals
+  const [showTaskModal, setShowTaskModal] = useState(false);
+  const [showClientModal, setShowClientModal] = useState(false);
+  const [clientModalData, setClientModalData] = useState(null); 
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [showFiscalKey, setShowFiscalKey] = useState({}); 
+  const [isSeeding, setIsSeeding] = useState(false);
+
+  // --- EFECTOS ---
+
+  useEffect(() => {
+    const initAuth = async () => {
+      try {
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+          await signInWithCustomToken(auth, __initial_auth_token);
+        } else {
+          await signInAnonymously(auth);
+        }
+      } catch (e) {
+        console.error("Auth error:", e);
+        // Silenciamos error visual si es por entorno de prueba
+        if (!e.message.includes('api-key-not-valid')) {
+           setErrorMsg("Error de autenticación: " + e.message);
+        }
+      } finally {
+        setIsAuthReady(true);
+      }
+    };
+    initAuth();
+    
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setFirebaseUser(user);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Listeners protegidos
+  useEffect(() => {
+    if (!isAuthReady || !firebaseUser) return;
+    
+    // Clients Listener
+    const qClients = collection(db, 'artifacts', appId, 'public', 'data', 'clients');
+    const unsubClients = onSnapshot(qClients, (snapshot) => {
+      const clientsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setClients(clientsData.sort((a,b) => a.name.localeCompare(b.name)));
+      setErrorMsg(null); 
+    }, (error) => {
+      console.error("Error reading clients:", error);
+      if (error.code === 'permission-denied') {
+        setErrorMsg("Error de Permisos: Revisa las Reglas de Firestore.");
+      }
+    });
+
+    // Tasks Listener
+    const qTasks = collection(db, 'artifacts', appId, 'public', 'data', 'tasks');
+    const unsubTasks = onSnapshot(qTasks, (snapshot) => {
+      const tasksData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setTasks(tasksData);
+    }, (error) => console.error("Error reading tasks:", error));
+
+    return () => {
+      unsubClients();
+      unsubTasks();
+    };
+  }, [isAuthReady, firebaseUser]);
+
+
+  // --- FUNCIONES DB ---
+
+  const handleLogout = () => {
+    setCurrentUser(null);
+    setCurrentUserFilter('all');
+    setSelectedClient(null);
+  };
+
+  const toggleFiscalKey = (clientId) => {
+    setShowFiscalKey(prev => ({ ...prev, [clientId]: !prev[clientId] }));
+  };
+
+  const openEditClientModal = (client, e) => {
+    e.stopPropagation(); 
+    setClientModalData(client);
+    setShowClientModal(true);
+  };
+
+  const openNewClientModal = () => {
+    setClientModalData(null); 
+    setShowClientModal(true);
+  };
+
+  const handleSaveClient = async (clientData) => {
+    if (!firebaseUser) return;
+    try {
+      if (clientData.id) {
+        const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'clients', clientData.id);
+        await updateDoc(docRef, clientData);
+        showNotification("Cliente actualizado.");
+      } else {
+        const newClient = { ...clientData, status: "active", obligations: clientData.obligations || ["IVA"] };
+        await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'clients'), newClient);
+        showNotification("Nuevo cliente creado.");
+      }
+      setShowClientModal(false);
+      if (selectedClient && clientData.id && selectedClient.id === clientData.id) {
+        setSelectedClient(clientData);
+      }
+    } catch (error) {
+      console.error("Error saving client:", error);
+      showNotification("Error al guardar.");
+    }
+  };
+
+  // Función Mágica de Carga (ahora solo se activa manualmente si se quiere)
+  const seedDatabaseFromPDF = async () => {
+    if (!firebaseUser) return;
+    setIsSeeding(true);
+    
+    try {
+      const batch = writeBatch(db);
+      const chunk = RAW_CLIENTS_FROM_PDF.slice(0, 450); 
+      
+      chunk.forEach(raw => {
+        const docRef = doc(collection(db, 'artifacts', appId, 'public', 'data', 'clients'));
+        const clientObj = {
+          name: raw[0],
+          cuit: raw[1],
+          fiscalKey: raw[2],
+          status: raw[3] === "SI" ? "active" : "inactive",
+          condition: "Resp. Inscripto", 
+          obligations: raw[3] === "SI" ? ["IVA", "IIBB"] : [] 
+        };
+        batch.set(docRef, clientObj);
+      });
+
+      await batch.commit();
+      showNotification(`¡Base cargada! ${chunk.length} clientes subidos.`);
+    } catch (error) {
+      console.error("Error seeding DB:", error);
+      showNotification("Error al cargar la base de datos.");
+    } finally {
+      setIsSeeding(false);
+    }
+  };
+
+  const generateMonthlyTasks = async () => {
+    if (!firebaseUser) return;
+    const today = new Date();
+    const monthName = today.toLocaleString('es-ES', { month: 'long' });
+    let newTasksCount = 0;
+    const batch = writeBatch(db);
+
+    clients.forEach(client => {
+      if (client.status !== 'active' || !client.obligations) return;
+      client.obligations.forEach(obligation => {
+        const meta = OBLIGATION_META[obligation] || { priority: "medium", category: "General" };
+        const dynamicDueDate = calculateDynamicDate(obligation, client.cuit);
+        const taskTitle = `${obligation} - ${monthName.charAt(0).toUpperCase() + monthName.slice(1)}`;
+        const exists = tasks.some(t => t.clientId === client.id && t.title === taskTitle);
+
+        if (!exists) {
+          const newTaskRef = doc(collection(db, 'artifacts', appId, 'public', 'data', 'tasks'));
+          batch.set(newTaskRef, {
+            title: taskTitle,
+            clientId: client.id,
+            dueDate: dynamicDueDate,
+            status: "pending",
+            priority: meta.priority,
+            category: meta.category,
+            assignedTo: null 
+          });
+          newTasksCount++;
+        }
+      });
+    });
+
+    try {
+      if (newTasksCount > 0) {
+        await batch.commit();
+        showNotification(`${newTasksCount} vencimientos generados.`);
+      } else {
+        showNotification("Todo al día.");
+      }
+    } catch (error) {
+      console.error("Error generating tasks:", error);
+      showNotification("Error al generar tareas.");
+    }
+  };
+
+  const showNotification = (msg) => {
+    setNotification(msg);
+    setTimeout(() => setNotification(null), 4000);
+  };
+
+  const getFilteredTasks = () => {
+    let filtered = tasks;
+    if (currentUserFilter === 'unassigned') {
+      filtered = filtered.filter(t => t.assignedTo === null);
+    } else if (currentUserFilter !== 'all') {
+      filtered = filtered.filter(t => t.assignedTo === currentUserFilter);
+    }
+    return filtered.sort((a,b) => new Date(a.dueDate) - new Date(b.dueDate));
+  };
+
+  const getFilteredClients = () => {
+    if (clientStatusFilter === 'all') return clients;
+    return clients.filter(c => c.status === clientStatusFilter);
+  };
+
+  // --- VISTAS INTERNAS ---
+
+  const ClientDetailView = ({ client, onBack }) => {
+    const clientTasks = tasks.filter(t => t.clientId === client.id).sort((a,b) => new Date(b.dueDate) - new Date(a.dueDate));
+
+    return (
+      <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+        <div className="flex justify-between items-center">
+          <button onClick={onBack} className="flex items-center gap-2 text-gray-500 hover:text-blue-600 transition-colors">
+            <ArrowLeft size={18} /> Volver a lista
+          </button>
+          <button 
+             onClick={(e) => openEditClientModal(client, e)}
+             className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors font-medium text-sm"
+          >
+             <Pencil size={16} /> Editar Datos
+          </button>
+        </div>
+
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+          <div className="p-6 border-b border-gray-100 bg-gray-50/50 flex justify-between items-start">
+            <div>
+              <div className="flex items-center gap-3 mb-2">
+                 <div className={`p-2 rounded-lg ${client.status === 'active' ? 'bg-blue-100 text-blue-700' : 'bg-gray-200 text-gray-500'}`}>
+                   <Briefcase size={24} />
+                 </div>
+                 <h2 className="text-2xl font-bold text-gray-800">{client.name}</h2>
+              </div>
+              <p className="text-gray-500 font-mono flex items-center gap-2">
+                <FileText size={14}/> CUIT: {client.cuit}
+              </p>
+            </div>
+            <StatusBadge status={client.status} />
+          </div>
+
+          <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="space-y-4">
+               <h3 className="font-semibold text-gray-900 border-b pb-2">Información Fiscal</h3>
+               <div className="space-y-3 text-sm">
+                 <div>
+                   <p className="text-gray-500 text-xs">Condición</p>
+                   <p className="font-medium">{client.condition}</p>
+                 </div>
+                 {client.fiscalKey && (
+                    <div>
+                      <p className="text-gray-500 text-xs">Clave Fiscal</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <code className="bg-yellow-50 px-2 py-1 rounded text-yellow-700 border border-yellow-100">
+                          {showFiscalKey[client.id] ? client.fiscalKey : "••••••••"}
+                        </code>
+                        <button onClick={() => toggleFiscalKey(client.id)} className="text-xs text-blue-600 hover:underline">
+                          {showFiscalKey[client.id] ? "Ocultar" : "Ver"}
+                        </button>
+                      </div>
+                    </div>
+                 )}
+                 <div>
+                   <p className="text-gray-500 text-xs">Notas</p>
+                   <p className="italic text-gray-600">{client.notes || "Sin notas adicionales."}</p>
+                 </div>
+               </div>
+            </div>
+
+            <div className="space-y-4">
+               <h3 className="font-semibold text-gray-900 border-b pb-2">Contacto</h3>
+               <div className="space-y-3 text-sm">
+                 <div className="flex items-center gap-2">
+                   <Users size={16} className="text-gray-400"/>
+                   <span>{client.contact || "Sin contacto"}</span>
+                 </div>
+                 <div className="flex items-center gap-2">
+                    <Mail size={16} className="text-gray-400"/>
+                    {client.email ? (
+                      <a href={`mailto:${client.email}`} className="text-blue-600 hover:underline truncate">{client.email}</a>
+                    ) : (
+                      <span className="text-gray-400 italic">Sin email (Click Editar)</span>
+                    )}
+                 </div>
+                 <div className="flex items-center gap-2">
+                    <Phone size={16} className="text-gray-400"/>
+                    <span>{client.phone || "Sin teléfono"}</span>
+                 </div>
+               </div>
+
+               <h3 className="font-semibold text-gray-900 border-b pb-2 pt-4">Obligaciones</h3>
+               <div className="flex flex-wrap gap-1">
+                  {client.obligations && client.obligations.length > 0 ? client.obligations.map((obl, idx) => (
+                    <span key={idx} className="text-xs px-2 py-1 bg-gray-100 border border-gray-200 rounded text-gray-600">
+                      {obl}
+                    </span>
+                  )) : <span className="text-xs text-gray-400 italic">Sin obligaciones definidas</span>}
+               </div>
+            </div>
+
+            <div className="space-y-4 md:col-span-1">
+               <h3 className="font-semibold text-gray-900 border-b pb-2">Historial de Tareas</h3>
+               <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
+                 {clientTasks.length === 0 ? (
+                   <p className="text-sm text-gray-400 italic">No hay tareas registradas.</p>
+                 ) : (
+                   clientTasks.map(task => (
+                     <div key={task.id} className="p-3 bg-gray-50 rounded-lg border border-gray-100 text-sm">
+                        <div className="flex justify-between mb-1">
+                          <span className="font-medium text-gray-800">{task.title}</span>
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded ${task.status === 'completed' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                            {task.status === 'completed' ? 'Listo' : 'Pend.'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center text-xs text-gray-500">
+                          <span>Vence: {task.dueDate}</span>
+                          <UserAvatar userId={task.assignedTo} />
+                        </div>
+                     </div>
+                   ))
+                 )}
+               </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const ClientFormModal = ({ clientData, onClose, onSave }) => {
+    const [formData, setFormData] = useState(clientData || {
+      name: '',
+      cuit: '',
+      condition: 'Resp. Inscripto',
+      fiscalKey: '',
+      email: '',
+      phone: '',
+      notes: '',
+      status: 'active'
+    });
+
+    const handleChange = (e) => {
+      setFormData({ ...formData, [e.target.name]: e.target.value });
+    };
+
+    return (
+      <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
+        <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+          <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+            <h3 className="font-bold text-gray-800 flex items-center gap-2">
+              {clientData ? <Pencil size={18}/> : <Plus size={18}/>}
+              {clientData ? 'Editar Cliente' : 'Nuevo Cliente'}
+            </h3>
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={20} /></button>
+          </div>
+          
+          <div className="p-6 space-y-4 overflow-y-auto">
+             <div className="grid grid-cols-2 gap-4">
+              <div className="col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Razón Social *</label>
+                <input 
+                  type="text" 
+                  name="name" 
+                  value={formData.name} 
+                  onChange={handleChange}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500" 
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">CUIT *</label>
+                <input 
+                  type="text" 
+                  name="cuit"
+                  value={formData.cuit} 
+                  onChange={handleChange}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500" 
+                />
+              </div>
+              <div>
+                 <label className="block text-sm font-medium text-gray-700 mb-1">Estado</label>
+                 <select 
+                    name="status"
+                    value={formData.status}
+                    onChange={handleChange}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none"
+                 >
+                   <option value="active">Activo</option>
+                   <option value="inactive">Inactivo</option>
+                 </select>
+              </div>
+              <div>
+                 <label className="block text-sm font-medium text-gray-700 mb-1">Condición</label>
+                 <select 
+                    name="condition"
+                    value={formData.condition}
+                    onChange={handleChange}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none"
+                 >
+                   <option>Resp. Inscripto</option>
+                   <option>Monotributo</option>
+                   <option>SAS</option>
+                   <option>Exento</option>
+                 </select>
+              </div>
+              <div className="col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Clave Fiscal</label>
+                <input 
+                  type="text" 
+                  name="fiscalKey"
+                  value={formData.fiscalKey} 
+                  onChange={handleChange}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm bg-yellow-50" 
+                  placeholder="Contraseña AFIP"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <input 
+                  type="email" 
+                  name="email"
+                  value={formData.email} 
+                  onChange={handleChange}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500" 
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
+                <input 
+                  type="text" 
+                  name="phone"
+                  value={formData.phone} 
+                  onChange={handleChange}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500" 
+                />
+              </div>
+              <div className="col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Notas Internas</label>
+                <textarea 
+                  name="notes"
+                  value={formData.notes}
+                  onChange={handleChange}
+                  rows="3"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  placeholder="Cierre de ejercicio, jurisdicciones, datos extra..."
+                />
+              </div>
+             </div>
+          </div>
+          
+          <div className="px-6 py-4 bg-gray-50 flex justify-end gap-3 mt-auto">
+            <button onClick={onClose} className="px-4 py-2 text-gray-600 hover:bg-gray-200 rounded-lg font-medium transition-colors">Cancelar</button>
+            <button 
+              onClick={() => onSave(formData)} 
+              className="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg font-medium transition-colors flex items-center gap-2"
+            >
+              <Save size={18} /> Guardar
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const ImportModal = () => {
+    const [text, setText] = useState('');
+    
+    const handleImport = async () => {
+      if (!text.trim() || !firebaseUser) return;
+      
+      const lines = text.trim().split('\n');
+      const batch = writeBatch(db);
+      
+      let count = 0;
+      lines.forEach(line => {
+        const parts = line.split(',').map(p => p.trim());
+        if (parts.length > 0) {
+          const docRef = doc(collection(db, 'artifacts', appId, 'public', 'data', 'clients'));
+          batch.set(docRef, {
+            name: parts[0] || "Sin Nombre",
+            cuit: parts[1] || "Sin CUIT",
+            condition: parts[2] || "Resp. Inscripto",
+            status: "active",
+            obligations: ["IVA", "IIBB"]
+          });
+          count++;
+        }
+      });
+      
+      try {
+        await batch.commit();
+        showNotification(`Se importaron ${count} clientes a la nube.`);
+        setShowImportModal(false);
+      } catch (error) {
+        console.error("Error importing:", error);
+        showNotification("Error en la importación.");
+      }
+    };
+
+    return (
+      <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+              <h3 className="font-bold text-gray-800 flex items-center gap-2"><Upload size={18}/> Importación Masiva (CSV)</h3>
+              <button onClick={() => setShowImportModal(false)} className="text-gray-400 hover:text-gray-600"><X size={20} /></button>
+            </div>
+            <div className="p-6 space-y-4">
+               <p className="text-sm text-gray-600">
+                 Pega aquí tu lista de clientes (desde Excel o texto). <br/>
+                 <span className="text-xs text-gray-400">Formato recomendado por línea: <strong>Razón Social, CUIT, Condición</strong></span>
+               </p>
+               <textarea 
+                 className="w-full h-64 border border-gray-300 rounded-lg p-3 font-mono text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                 placeholder={`Empresa A, 30-11111111-1, Resp. Inscripto\nEmpresa B, 30-22222222-2, Monotributo`}
+                 value={text}
+                 onChange={(e) => setText(e.target.value)}
+               />
+            </div>
+            <div className="px-6 py-4 bg-gray-50 flex justify-end gap-3">
+              <button onClick={() => setShowImportModal(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-200 rounded-lg font-medium transition-colors">Cancelar</button>
+              <button onClick={handleImport} className="px-4 py-2 bg-green-600 text-white hover:bg-green-700 rounded-lg font-medium transition-colors">Procesar e Importar</button>
+            </div>
+          </div>
+        </div>
+    );
+  };
+
+  const ClientsView = () => {
+    const filteredClients = getFilteredClients();
+
+    return (
+      <div className="space-y-4 animate-in fade-in">
+         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-800">Cartera de Clientes</h2>
+            <p className="text-sm text-gray-500">{clients.length} totales | {clients.filter(c => c.status === 'active').length} activos</p>
+          </div>
+          <div className="flex flex-col md:flex-row gap-3 w-full md:w-auto items-end md:items-center">
+            
+            {/* TABS DE FILTRO */}
+            <div className="flex bg-gray-100 p-1 rounded-lg">
+               <button 
+                 onClick={() => setClientStatusFilter('active')}
+                 className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all flex items-center gap-1 ${clientStatusFilter === 'active' ? 'bg-white shadow text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+               >
+                 <UserCheck size={14} /> Activos
+               </button>
+               <button 
+                 onClick={() => setClientStatusFilter('inactive')}
+                 className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all flex items-center gap-1 ${clientStatusFilter === 'inactive' ? 'bg-white shadow text-gray-600' : 'text-gray-500 hover:text-gray-700'}`}
+               >
+                 <UserX size={14} /> Inactivos
+               </button>
+               <button 
+                 onClick={() => setClientStatusFilter('all')}
+                 className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${clientStatusFilter === 'all' ? 'bg-white shadow text-purple-600' : 'text-gray-500 hover:text-gray-700'}`}
+               >
+                 Todos
+               </button>
+            </div>
+
+            <div className="flex gap-2 w-full md:w-auto">
+              {/* BOTÓN SOLO VISIBLE SI LA BASE ESTÁ VACÍA */}
+              {clients.length === 0 && (
+                <button 
+                  onClick={seedDatabaseFromPDF} 
+                  disabled={isSeeding}
+                  className="flex items-center gap-2 px-4 py-2 bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100 rounded-lg transition-colors shadow-sm font-medium text-sm flex-1 md:flex-none justify-center disabled:opacity-50"
+                >
+                  {isSeeding ? <Loader2 size={16} className="animate-spin"/> : <Database size={16} />}
+                  {isSeeding ? "Cargando..." : "Cargar Base Inicial"}
+                </button>
+              )}
+              
+              <button 
+                onClick={() => setShowImportModal(true)} 
+                className="flex items-center gap-2 px-4 py-2 bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 rounded-lg transition-colors shadow-sm font-medium text-sm flex-1 md:flex-none justify-center"
+              >
+                <Upload size={16} />
+                Importar
+              </button>
+              <button 
+                onClick={openNewClientModal} 
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm font-medium text-sm flex-1 md:flex-none justify-center"
+              >
+                <Plus size={16} />
+                Nuevo
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          {clients.length === 0 ? (
+            <div className="col-span-full py-12 text-center bg-gray-50 rounded-xl border border-dashed border-gray-300">
+               <Briefcase size={40} className="mx-auto text-gray-300 mb-4" />
+               <h3 className="text-lg font-medium text-gray-600">Base de datos vacía</h3>
+               <p className="text-gray-400 mt-1 mb-6">La lista está lista para importarse.</p>
+            </div>
+          ) : (
+            filteredClients.map(client => (
+              <div 
+                key={client.id} 
+                onClick={() => setSelectedClient(client)}
+                className={`bg-white p-5 rounded-xl shadow-sm border ${client.status === 'inactive' ? 'border-gray-200 bg-gray-100 opacity-80' : 'border-gray-200 hover:border-blue-300 hover:shadow-md'} transition-all group cursor-pointer relative`}
+              >
+                <button 
+                  onClick={(e) => openEditClientModal(client, e)}
+                  className="absolute top-4 right-4 p-1.5 text-gray-300 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors z-10"
+                  title="Editar datos"
+                >
+                   <Pencil size={16} />
+                </button>
+                
+                <div className="flex gap-3 items-center mb-4 pr-8">
+                     <div className={`p-2 rounded-lg ${client.status === 'inactive' ? 'bg-gray-200 text-gray-500' : 'bg-blue-50 text-blue-600'}`}>
+                       <Briefcase size={20} />
+                     </div>
+                     <div>
+                       <h3 className="font-bold text-gray-900 leading-tight line-clamp-1 mr-4">{client.name}</h3>
+                       <p className="text-xs text-gray-400 font-mono mt-0.5">{client.cuit}</p>
+                     </div>
+                </div>
+                
+                <div className="space-y-3">
+                   <StatusBadge status={client.status} />
+                   {client.status === 'active' && (
+                     <div className="pt-2 border-t border-gray-50">
+                        <div className="flex justify-between text-sm text-gray-600 mb-1">
+                          <span>Obligaciones:</span>
+                          <span className="font-medium">{client.obligations ? client.obligations.length : 0}</span>
+                        </div>
+                        <div className="w-full bg-gray-100 rounded-full h-1.5">
+                          <div className="bg-blue-500 h-1.5 rounded-full" style={{width: '100%'}}></div>
+                        </div>
+                     </div>
+                   )}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  const DashboardView = () => {
+    const myTasks = tasks.filter(t => t.assignedTo === currentUser.id && t.status !== 'completed').length;
+    const unassignedTasks = tasks.filter(t => t.assignedTo === null && t.status !== 'completed').length;
+    const criticalTasks = tasks.filter(t => t.priority === 'critical' && t.status !== 'completed').length;
+    
+    const nextDue = tasks.filter(t => t.status !== 'completed').sort((a,b) => new Date(a.dueDate) - new Date(b.dueDate)).slice(0, 5);
+
+    return (
+      <div className="space-y-6 animate-in fade-in duration-500">
+        <div className="flex justify-between items-center mb-2">
+           <h2 className="text-2xl font-bold text-gray-800">Hola, {currentUser.name.split(' ')[0]} 👋</h2>
+           <span className="text-sm text-gray-500 hidden md:inline">Hoy es {new Date().toLocaleDateString()}</span>
+        </div>
+
+        {errorMsg && (
+          <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg flex items-center gap-3 mb-4">
+            <AlertTriangle size={24} />
+            <div>
+              <p className="font-bold">Error de Conexión</p>
+              <p className="text-sm">{errorMsg}</p>
+            </div>
+          </div>
+        )}
+
+        {/* KPI Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow cursor-pointer" onClick={() => {setCurrentUserFilter(currentUser.id); setActiveTab('tasks')}}>
+            <div className="flex justify-between items-start">
+              <div>
+                <p className="text-sm font-medium text-gray-500">Mis Pendientes</p>
+                <h3 className="text-2xl font-bold text-blue-600 mt-2">{myTasks}</h3>
+              </div>
+              <div className="p-2 bg-blue-50 rounded-lg text-blue-600">
+                <CheckSquare size={20} />
+              </div>
+            </div>
+            <div className="mt-4 flex items-center text-xs text-gray-400">
+               Click para ver mis tareas
+            </div>
+          </div>
+
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow cursor-pointer" onClick={() => {setCurrentUserFilter('unassigned'); setActiveTab('tasks')}}>
+            <div className="flex justify-between items-start">
+              <div>
+                <p className="text-sm font-medium text-gray-500">Sin Asignar</p>
+                <h3 className="text-2xl font-bold text-orange-500 mt-2">{unassignedTasks}</h3>
+              </div>
+              <div className="p-2 bg-orange-50 rounded-lg text-orange-500">
+                <HelpCircle size={20} />
+              </div>
+            </div>
+             <div className="mt-4 flex items-center text-xs text-gray-400">
+               Tareas libres para tomar
+            </div>
+          </div>
+
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+            <div className="flex justify-between items-start">
+              <div>
+                <p className="text-sm font-medium text-gray-500">Urgencias</p>
+                <h3 className="text-2xl font-bold text-red-600 mt-2">{criticalTasks}</h3>
+              </div>
+              <div className="p-2 bg-red-50 rounded-lg text-red-600">
+                <AlertCircle size={20} />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+            <div className="flex justify-between items-start">
+              <div>
+                <p className="text-sm font-medium text-gray-500">Clientes Estudio</p>
+                <h3 className="text-2xl font-bold text-gray-900 mt-2">{clients.filter(c => c.status === 'active').length}</h3>
+              </div>
+              <div className="p-2 bg-green-50 rounded-lg text-green-600">
+                <Users size={20} />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Agenda de Vencimientos */}
+          <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="p-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+              <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                <Calendar size={18} className="text-gray-400"/> Próximos Vencimientos
+              </h3>
+              <button onClick={() => setActiveTab('tasks')} className="text-sm text-blue-600 hover:underline">Ver todo</button>
+            </div>
+            <div className="divide-y divide-gray-100">
+              {nextDue.length === 0 ? (
+                <div className="p-8 text-center text-gray-400">
+                  <p>¡Todo al día!</p>
+                </div>
+              ) : (
+                nextDue.map(task => {
+                  const client = clients.find(c => c.id === task.clientId);
+                  const isMyTask = task.assignedTo === currentUser.id;
+                  const isUnassigned = task.assignedTo === null;
+
+                  return (
+                    <div key={task.id} className={`p-4 transition-colors flex items-center justify-between ${isMyTask ? 'bg-blue-50/30' : 'hover:bg-gray-50'}`}>
+                      <div className="flex items-start gap-3">
+                        <div className={`mt-1.5 w-2 h-2 rounded-full ${task.priority === 'critical' ? 'bg-red-500' : 'bg-blue-500'}`} />
+                        <div>
+                          <h4 className={`font-medium text-sm ${isMyTask ? 'text-blue-700 font-bold' : 'text-gray-900'}`}>
+                            {task.title} 
+                            {isMyTask && <span className="text-[10px] bg-blue-100 text-blue-600 px-1 rounded ml-1">MÍA</span>}
+                            {isUnassigned && <span className="text-[10px] bg-gray-100 text-gray-500 px-1 rounded ml-1 border border-gray-200">LIBRE</span>}
+                          </h4>
+                          <p className="text-xs text-gray-500">{client ? client.name : "Cliente Desconocido"}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <UserAvatar userId={task.assignedTo} />
+                        <div className="text-right w-24">
+                          <p className="text-sm font-medium text-gray-900">{task.dueDate}</p>
+                          <span className="text-[10px] text-gray-400 uppercase">Vence</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+
+          {/* Accesos Rápidos */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+            <h3 className="font-semibold text-gray-900 mb-4">Acciones Rápidas</h3>
+            <div className="space-y-3">
+              <button 
+                onClick={generateMonthlyTasks}
+                className="w-full flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:border-yellow-300 hover:bg-yellow-50 transition-all text-left group"
+              >
+                <div className="p-2 bg-yellow-100 text-yellow-600 rounded group-hover:bg-yellow-200">
+                  <Zap size={18} />
+                </div>
+                <div>
+                  <span className="block font-medium text-gray-900">Generar Mensuales</span>
+                  <span className="text-xs text-gray-500">Crea tareas (Sin asignar)</span>
+                </div>
+              </button>
+              
+              <button 
+                onClick={() => setShowTaskModal(true)}
+                className="w-full flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-all text-left group"
+              >
+                <div className="p-2 bg-blue-100 text-blue-600 rounded group-hover:bg-blue-200">
+                  <Plus size={18} />
+                </div>
+                <div>
+                  <span className="block font-medium text-gray-900">Tarea Manual</span>
+                  <span className="text-xs text-gray-500">Asignar a Ivan/Jano</span>
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const TasksView = () => (
+    <div className="space-y-4 animate-in fade-in">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+        <div>
+           <h2 className="text-2xl font-bold text-gray-800">Gestión de Tareas</h2>
+           <p className="text-sm text-gray-500">Repartición de trabajo del estudio</p>
+        </div>
+        
+        <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+          {/* Filtro de Usuario */}
+          <div className="flex items-center bg-gray-50 rounded-lg p-1 border border-gray-200 overflow-x-auto">
+             <button 
+                onClick={() => setCurrentUserFilter('all')}
+                className={`px-3 py-1.5 text-sm rounded-md transition-all whitespace-nowrap ${currentUserFilter === 'all' ? 'bg-white shadow text-blue-600 font-medium' : 'text-gray-500 hover:text-gray-700'}`}
+             >
+               Todas
+             </button>
+             <button 
+                onClick={() => setCurrentUserFilter('unassigned')}
+                className={`px-3 py-1.5 text-sm rounded-md transition-all whitespace-nowrap flex items-center gap-1 ${currentUserFilter === 'unassigned' ? 'bg-white shadow text-orange-600 font-medium' : 'text-gray-500 hover:text-gray-700'}`}
+             >
+               <HelpCircle size={14} /> Sin Asignar
+             </button>
+             <div className="w-px h-4 bg-gray-300 mx-1"></div>
+             {TEAM_MEMBERS.map(member => (
+               <button 
+                  key={member.id}
+                  onClick={() => setCurrentUserFilter(member.id)}
+                  className={`px-3 py-1.5 text-sm rounded-md transition-all flex items-center gap-1 whitespace-nowrap ${currentUserFilter === member.id ? 'bg-white shadow text-blue-600 font-medium' : 'text-gray-500 hover:text-gray-700'}`}
+               >
+                 {member.initials}
+               </button>
+             ))}
+          </div>
+          
+          <button onClick={() => setShowTaskModal(true)} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm text-sm font-medium ml-2">
+            <Plus size={16} /> Nueva
+          </button>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead className="bg-gray-50 border-b border-gray-100">
+              <tr>
+                <th className="px-6 py-4 font-semibold text-gray-600">Vencimiento</th>
+                <th className="px-6 py-4 font-semibold text-gray-600">Cliente / CUIT</th>
+                <th className="px-6 py-4 font-semibold text-gray-600">Tarea</th>
+                <th className="px-6 py-4 font-semibold text-gray-600">Responsable</th>
+                <th className="px-6 py-4 font-semibold text-gray-600">Prioridad</th>
+                <th className="px-6 py-4 font-semibold text-gray-600">Estado</th>
+                <th className="px-6 py-4 font-semibold text-gray-600 text-right"></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {getFilteredTasks().length === 0 ? (
+                <tr><td colSpan="7" className="p-10 text-center text-gray-400">No hay tareas con este filtro.</td></tr>
+              ) : (
+                getFilteredTasks().map(task => {
+                  const client = clients.find(c => c.id === task.clientId);
+                  const isMyTask = task.assignedTo === currentUser.id;
+                  const isUnassigned = task.assignedTo === null;
+
+                  return (
+                    <tr key={task.id} className={`transition-colors group ${isMyTask ? 'bg-blue-50/30 hover:bg-blue-50' : 'hover:bg-gray-50'}`}>
+                      <td className="px-6 py-4">
+                        <div className="flex flex-col">
+                          <span className={`font-bold ${task.priority === 'critical' ? 'text-red-600' : 'text-gray-700'}`}>
+                            {new Date(task.dueDate).getDate()}
+                          </span>
+                          <span className="text-xs text-gray-400 uppercase">
+                              {new Date(task.dueDate).toLocaleString('es-ES', { month: 'short' })}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="font-medium text-gray-900">{client ? client.name : "Cliente desconocido"}</div>
+                        <div className="text-xs text-gray-400 font-mono">CUIT: {client ? client.cuit : "-"}</div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="block text-gray-800 font-medium">{task.title}</span>
+                        <span className="inline-block mt-1 text-[10px] px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded">{task.category}</span>
+                      </td>
+                      <td className="px-6 py-4">
+                         {/* Clickeable para auto-asignarse si está libre (Mock visual) */}
+                        <div className={isUnassigned ? "cursor-pointer hover:opacity-80" : ""}>
+                          <UserAvatar userId={task.assignedTo} showName={true} />
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <PriorityBadge priority={task.priority} />
+                      </td>
+                      <td className="px-6 py-4">
+                        <StatusBadge status={task.status} />
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <button className="p-2 hover:bg-gray-200 rounded-full text-gray-400 hover:text-gray-600 opacity-0 group-hover:opacity-100 transition-all">
+                          <MoreVertical size={16} />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+
+  // --- RENDERIZADO PRINCIPAL ---
+  
+  if (!currentUser) {
+    return <LoginScreen onLogin={setCurrentUser} />;
+  }
+
+  return (
+    <div className="flex h-screen bg-gray-50 font-sans text-gray-800 relative">
+      {/* Toast Notification */}
+      {notification && (
+        <div className="fixed bottom-6 right-6 bg-gray-900 text-white px-5 py-3 rounded-xl shadow-2xl z-50 animate-in slide-in-from-bottom flex items-center gap-3">
+          <CheckCircle2 className="text-green-400" size={20} />
+          {notification}
+        </div>
+      )}
+
+      {/* Sidebar Desktop */}
+      <aside className="w-64 bg-white border-r border-gray-200 hidden md:flex flex-col z-20">
+        <div className="p-6">
+          <div className="flex items-center gap-3 text-blue-700 font-bold text-xl">
+            <div className="p-2 bg-blue-600 text-white rounded-lg shadow-lg shadow-blue-200">
+              <Briefcase size={22} />
+            </div>
+            UN PASO MAS
+          </div>
+        </div>
+
+        <nav className="flex-1 px-4 space-y-2">
+          <button onClick={() => {setActiveTab('dashboard'); setSelectedClient(null)}} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${activeTab === 'dashboard' ? 'bg-blue-50 text-blue-700 font-medium shadow-sm' : 'text-gray-600 hover:bg-gray-50'}`}>
+            <LayoutDashboard size={18} /> Resumen
+          </button>
+          <button onClick={() => {setActiveTab('tasks'); setSelectedClient(null)}} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${activeTab === 'tasks' ? 'bg-blue-50 text-blue-700 font-medium shadow-sm' : 'text-gray-600 hover:bg-gray-50'}`}>
+            <CheckSquare size={18} /> Tareas
+          </button>
+          <button onClick={() => {setActiveTab('clients'); setSelectedClient(null)}} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${activeTab === 'clients' ? 'bg-blue-50 text-blue-700 font-medium shadow-sm' : 'text-gray-600 hover:bg-gray-50'}`}>
+            <Users size={18} /> Clientes
+          </button>
+        </nav>
+
+        {/* Perfil Usuario Actual & Logout */}
+        <div className="p-4 border-t border-gray-200 bg-gray-50/50">
+           <div className="flex items-center justify-between p-2 rounded-lg border border-gray-100 bg-white shadow-sm">
+             <div className="flex items-center gap-2 overflow-hidden">
+               <UserAvatar userId={currentUser.id} /> 
+               <div className="overflow-hidden">
+                 <p className="text-sm font-medium text-gray-900 truncate w-24">{currentUser.name}</p>
+                 <p className="text-[10px] text-gray-400">Conectado</p>
+               </div>
+             </div>
+             <button onClick={handleLogout} className="text-gray-400 hover:text-red-600 p-1" title="Cerrar Sesión">
+               <LogOut size={16} />
+             </button>
+           </div>
+        </div>
+      </aside>
+
+      {/* Main Content Area */}
+      <main className="flex-1 overflow-auto p-4 md:p-8 mt-14 md:mt-0 scroll-smooth">
+        {activeTab === 'dashboard' && <DashboardView />}
+        {activeTab === 'tasks' && <TasksView />}
+        {activeTab === 'clients' && !selectedClient && <ClientsView />}
+        {activeTab === 'clients' && selectedClient && <ClientDetailView client={selectedClient} onBack={() => setSelectedClient(null)} />}
+      </main>
+
+      {/* MODALES */}
+      {showTaskModal && (
+        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+              <h3 className="font-bold text-gray-800">Nueva Tarea</h3>
+              <button onClick={() => setShowTaskModal(false)} className="text-gray-400 hover:text-gray-600"><X size={20} /></button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Título</label>
+                <input type="text" className="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none" placeholder="Ej: Trámite AFIP..." />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Cliente</label>
+                <select className="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none">
+                  {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                   <label className="block text-sm font-medium text-gray-700 mb-1">Vencimiento</label>
+                   <input type="date" className="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none" />
+                </div>
+                <div>
+                   <label className="block text-sm font-medium text-gray-700 mb-1">Responsable</label>
+                   <select className="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none">
+                     <option value="">-- Sin Asignar --</option>
+                     {TEAM_MEMBERS.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+                   </select>
+                </div>
+              </div>
+            </div>
+            <div className="px-6 py-4 bg-gray-50 flex justify-end gap-3">
+              <button onClick={() => setShowTaskModal(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-200 rounded-lg font-medium transition-colors">Cancelar</button>
+              <button onClick={() => setShowTaskModal(false)} className="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg font-medium transition-colors shadow-lg shadow-blue-200">Guardar Tarea</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal UNIFICADO para Crear y Editar Cliente */}
+      {showClientModal && (
+        <ClientFormModal 
+          clientData={clientModalData} 
+          onClose={() => setShowClientModal(false)}
+          onSave={handleSaveClient}
+        />
+      )}
+
+      {showImportModal && <ImportModal />}
+    </div>
+  );
+}
